@@ -3,7 +3,7 @@ from enlace import *
 import struct
 import time
 
-serialName = "COM3"  
+serialName = "COM4"  
 
 def decodifica(bytes):
     return struct.unpack('b', bytes)[0]
@@ -98,7 +98,7 @@ def main():
                     pass
                 else:
                     'tamanho do payload informado está incorreto, pedindo reenvio do pacote'
-                    reenvio =b'\x12\x11\x10\x09\x08\x07\x06\x05\x04\x03\x02\x01'
+                    reenvio =b'\x00\x00\x00\x00\x00\x00\x06\x05\x04\x03\x02\x01'
                     reenvio += b'\x10\x10\x10'
                     com2.sendData(reenvio)
 
@@ -131,6 +131,7 @@ def main():
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
+        com2.disable()
 
 
     except Exception as erro:
