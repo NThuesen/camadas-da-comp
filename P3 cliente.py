@@ -10,9 +10,11 @@ serialName = "COM5"  # Atualize para a porta correta no seu computador
 def codifica(numero):
     return struct.pack('B', numero)
 
-def handshake(com1, tamanho_loop):
+def handshake(com1, tamanho_loop, tamanho_payload):
     print('Enviando Handshake')
-    txbuffer = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+    txbuffer = b'\x00\x00\x00\x00\x00\x00'
+    txbuffer += int.to_bytes(tamanho_payload,2,'big')
+    txbuffer += int.to_bytes(tamanho_loop+1,2,'big')
     txbuffer += int.to_bytes(tamanho_loop,2,'big')
     txbuffer += b'\x10\x10\x10'
     com1.sendData(txbuffer)
@@ -89,7 +91,7 @@ def main():
                 time.sleep(0.2)
 
                 print("chamando função handshake")
-                handshake(com1,tamanho_loop)
+                handshake(com1,tamanho_loop,50)
                 print('esperando resposta')
                 time.sleep(0.1)
                 rxBuffer, nRx = com1.getData(15)
@@ -117,8 +119,30 @@ def main():
             print(f"pacote numero {numero_pacote} esta sendo enviado")
             while True:
                 buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
-                
                 time.sleep(0.1)
+                esperando_confirmar = True
+                while esperando_confirmar:
+                    com1.rx.clearBuffer()
+                    time.sleep(0.2)
+                    resposta_servidor, nrx = com1.getData(15)
+                    print('cheguei até aqui')    # não apagar o print, ele magicamente para de funcionar se apagar...
+                    print(resposta_servidor[:11]) # não apagar o print, ele magicamente para de funcionar se apagar...
+                    if resposta_servidor[:11] == b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00':
+                        print('pacote enviado com sucesso!')
+                        esperando_confirmar = False
+                    elif resposta_servidor[:11] ==  b'\x12\x11\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00':
+                     
+                        print(f'problema no eop, reenviando o pacote numero: {numero_pacote}')
+                        buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+                    elif resposta_servidor[:11] ==  b'\x12\x11\x10\x09\x08\x07\x06\x05\x04\x01\x02\x03':
+                     
+                        print(f'problema no tamanho do payload, reenviando o pacote numero: {numero_pacote}')
+                        buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+                    elif resposta_servidor[:11] == b'\x00\x00\x00\x00\x00\x00\x06\x05\x04\x03\x02\x01':
+                       
+                        print(f'problema no numero do pacote, reenviando o pacote numero: {numero_pacote}')
+                        buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+            
                 break
 
             payload += buffer_enviado[12:-3]
