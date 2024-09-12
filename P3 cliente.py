@@ -61,6 +61,7 @@ def main():
 
         #########################################################################################
         tentando_conectar = True
+        Nao_quer_conectar = False
         timeout = 5  # Timeout de 5 segundos
         start_time = datetime.now()
         resposta = ''
@@ -78,6 +79,8 @@ def main():
             
             if resposta == 'N':
                 tentando_conectar = False
+                Nao_quer_conectar = True
+                com1.disable()
                 break
 
             print('enviando byte de sacrificio')
@@ -98,71 +101,79 @@ def main():
                 if nRx == 15:
                     print('Handshake recebido com sucesso')
                 tentando_conectar = False
-
-        #########################################################################################
-
-        print('iniciando transmissão de dados')
-
-        #########################################################################################
-        payload = b''
-        bytes_enviados = 0
-        for i in range(tamanho_loop):
-            actual_imgBytes = image_bytes[i*50:(i+1)*50]
-            bytes_enviados += len(actual_imgBytes)
-
-            if tamanho_img-bytes_enviados>=50:
-                tamanho_prox = 50
-            else:
-                tamanho_prox = tamanho_img - bytes_enviados
-
-            numero_pacote = i+1
-            print(f"pacote numero {numero_pacote} esta sendo enviado")
-            while True:
-                buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
-                time.sleep(0.1)
-                esperando_confirmar = True
-                while esperando_confirmar:
-                    com1.rx.clearBuffer()
-                    time.sleep(0.2)
-                    resposta_servidor, nrx = com1.getData(15)
-                    print('cheguei até aqui')    # não apagar o print, ele magicamente para de funcionar se apagar...
-                    print(resposta_servidor[:11]) # não apagar o print, ele magicamente para de funcionar se apagar...
-                    if resposta_servidor[:11] == b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00':
-                        print('pacote enviado com sucesso!')
-                        esperando_confirmar = False
-                    elif resposta_servidor[:11] ==  b'\x12\x11\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00':
-                     
-                        print(f'problema no eop, reenviando o pacote numero: {numero_pacote}')
-                        buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
-                    elif resposta_servidor[:11] ==  b'\x12\x11\x10\x09\x08\x07\x06\x05\x04\x01\x02\x03':
-                     
-                        print(f'problema no tamanho do payload, reenviando o pacote numero: {numero_pacote}')
-                        buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
-                    elif resposta_servidor[:11] == b'\x00\x00\x00\x00\x00\x00\x06\x05\x04\x03\x02\x01':
-                       
-                        print(f'problema no numero do pacote, reenviando o pacote numero: {numero_pacote}')
-                        buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
-            
-                break
-
-            payload += buffer_enviado[12:-3]
-
-        # Fora do loop principal (payloads de 50 bytes)
-        print(f'tamanho do payload (do loop): {len(payload)}')
-
-        actual_imgBytes = image_bytes[-resto_loop:]
-        print(f'enviando ultimo pacote {tamanho_loop+1}')
-        print('--------------------------------------')
-        time.sleep(0.2)
-        buffer_enviado = enviar_ultimo_pacote(actual_imgBytes,resto_loop, tamanho_loop+1, com1)
-        payload += buffer_enviado[12:-3]
-        print(f'tamanho do payload (final): {len(payload)}')
-        if payload == image_bytes:
-            print('enviamos o payload correto')
-        else:
-            print('temos um problema com o payload')
         
-        #########################################################################################
+        while not Nao_quer_conectar:
+            #########################################################################################
+
+            print('iniciando transmissão de dados')
+
+            #########################################################################################
+            payload = b''
+            bytes_enviados = 0
+            for i in range(tamanho_loop):
+                actual_imgBytes = image_bytes[i*50:(i+1)*50]
+                bytes_enviados += len(actual_imgBytes)
+
+                if tamanho_img-bytes_enviados>=50:
+                    tamanho_prox = 50
+                else:
+                    tamanho_prox = tamanho_img - bytes_enviados
+
+                numero_pacote = i+1
+                print(f"pacote numero {numero_pacote} esta sendo enviado")
+                while True:
+                    buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+                    time.sleep(0.1)
+                    esperando_confirmar = True
+                    while esperando_confirmar:
+                        com1.rx.clearBuffer()
+                        time.sleep(0.2)
+                        resposta_servidor, nrx = com1.getData(15)
+                        print('cheguei até aqui')    # não apagar o print, ele magicamente para de funcionar se apagar...
+                        print(resposta_servidor[:11]) # não apagar o print, ele magicamente para de funcionar se apagar...
+                        if resposta_servidor[:11] == b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00':
+                            print('pacote enviado com sucesso!')
+                            esperando_confirmar = False
+
+
+                        elif resposta_servidor[:11] ==  b'\x12\x11\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00':
+                            print(f'problema no eop, reenviando o pacote numero: {numero_pacote}')
+                            buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+
+
+                        elif resposta_servidor[:11] ==  b'\x12\x11\x10\x09\x08\x07\x06\x05\x04\x01\x02\x03':
+                            print(f'problema no tamanho do payload, reenviando o pacote numero: {numero_pacote}')
+                            buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+
+
+                        elif resposta_servidor[:11] == b'\x00\x00\x00\x00\x00\x00\x06\x05\x04\x03\x02\x01':   
+                            print(f'problema no numero do pacote, reenviando o pacote numero: {numero_pacote}')
+                            buffer_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+
+
+                        else:
+                            com1.rx.clearBuffer()
+                    break
+
+                payload += buffer_enviado[12:-3]
+
+            # Fora do loop principal (payloads de 50 bytes)
+            print(f'tamanho do payload (do loop): {len(payload)}')
+
+            actual_imgBytes = image_bytes[-resto_loop:]
+            print(f'enviando ultimo pacote {tamanho_loop+1}')
+            print('--------------------------------------')
+            time.sleep(0.2)
+            buffer_enviado = enviar_ultimo_pacote(actual_imgBytes,resto_loop, tamanho_loop+1, com1)
+            payload += buffer_enviado[12:-3]
+            print(f'tamanho do payload (final): {len(payload)}')
+            if payload == image_bytes:
+                print('enviamos o payload correto')
+            else:
+                print('temos um problema com o payload')
+            break
+            
+            #########################################################################################
 
         print("-------------------------")
         print("Comunicação encerrada")
