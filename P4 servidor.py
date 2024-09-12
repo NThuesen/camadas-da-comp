@@ -5,11 +5,25 @@ import time
 
 serialName = "COM3"  
 
-def decodifica(bytes):
-    return struct.unpack('b', bytes)[0]
+# Função para calcular CRC-16
+def calcular_crc(payload: bytes):
+    crc = 0xFFFF
+    for byte in payload:
+        crc ^= byte
+        for _ in range(8):
+            if crc & 0x0001:
+                crc = (crc >> 1) ^ 0xA001
+            else:
+                crc >>= 1
+    return crc & 0xFFFF
 
-def codifica(numero):
-    return struct.pack('b', numero)
+# Função para escrever no log
+def log_evento_servidor(instante, acao, tipo_mensagem, tamanho, pacote_numero=None, total_pacotes=None, crc=None):
+    with open('log_servidor.txt', 'a') as log:
+        log.write(f"{instante} / {acao} / {tipo_mensagem} / {tamanho} bytes / ")
+        if pacote_numero is not None and total_pacotes is not None:
+            log.write(f"{pacote_numero} / {total_pacotes} / {hex(crc)}")
+        log.write("\n")
 
 def handshake(rxBuffer:bytes):
     com2 = enlace(serialName)
@@ -17,10 +31,10 @@ def handshake(rxBuffer:bytes):
     print("Devolvendo o handshake")
     com2.sendData(rxBuffer[1:10])
     return rxBuffer[0]
-    
+
+# Função principal
 def main():
     try:
-        
         print("Iniciou o main no receptor")
         
         com2 = enlace(serialName)
@@ -36,15 +50,15 @@ def main():
 
         print("Aguardando dados...") 
         rxBuffer, nRx = com2.getData(15)
-        print("Recebemos {} bytes".format(nRx))
-        if(nRx == 15):
-            handshake = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-            handshake += b'\x10\x10\x10'
-            tamanho_payload = int.from_bytes(rxBuffer[7:8],'big')
-            tamanho_loop = int.from_bytes(rxBuffer[11:12],'big')
-            quantidade_de_pacotes = int.from_bytes(rxBuffer[9:10],'big')
+        print(f"Recebemos {nRx} bytes")
+        
+        if nRx == 15:
+            handshake = b'\x00' * 12 + b'\x10\x10\x10'
+            tamanho_payload = int.from_bytes(rxBuffer[7:8], 'big')
+            tamanho_loop = int.from_bytes(rxBuffer[11:12], 'big')
+            quantidade_de_pacotes = int.from_bytes(rxBuffer[9:10], 'big')
             print("Handshake recebido")
-            print(f'esse é o tamanho do loop: {tamanho_loop}')
+            print(f'Tamanho do loop: {tamanho_loop}')
             com2.sendData(handshake)
             print("Devolvendo Handshake")
 
@@ -55,83 +69,93 @@ def main():
         payload = b''
         index_do_pacote = 0
         index_anterior = 0
+
         for i in range(tamanho_loop):
             while True:
                 len_rx = com2.rx.getBufferLen()
                 confirmando_pacote = True
-                if len_rx == 15+tamanho_payload:
+                if len_rx == 15 + tamanho_payload:
                     while confirmando_pacote:
-                        rxBuffer, nRx = com2.getData(15+tamanho_payload)
+                        rxBuffer, nRx = com2.getData(15 + tamanho_payload)
                         tamanho_payload = rxBuffer[3]
                         index_do_pacote = rxBuffer[1]
+
+                        # Verificando o CRC
+                        payload_recebido = rxBuffer[12:-3]
+                        crc_recebido = int.from_bytes(rxBuffer[-5:-3], 'big')
+                        crc_calculado = calcular_crc(payload_recebido)
+
                         time.sleep(0.2)
                         if index_do_pacote == index_anterior + 1:
-                            print('numero do pacote correto!')
+                            print('Número do pacote correto!')
                             time.sleep(0.1)
                             if rxBuffer[-3:] == b'\x10\x10\x10':
-                                print('eop tambem está correto!')
-                                time.sleep(0.1)
-                                payload += rxBuffer[12:-3]
-                                acknowledge =b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00'
-                                acknowledge += b'\x10\x10\x10'
-                                com2.sendData(acknowledge)
-                                com2.rx.clearBuffer()
-                                index_anterior += 1
-                                confirmando_pacote = False
+                                print('EOP também está correto!')
+                                
+                                if crc_calculado == crc_recebido:
+                                    print('CRC válido!')
+                                    
+                                    # Registro do log (recepção do pacote com sucesso)
+                                    instante_receb = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime())
+                                    log_evento_servidor(instante_receb, "receb", "dados", nRx, i+1, tamanho_loop, crc_calculado)
+
+                                    # Enviando acknowledgment
+                                    acknowledge = b'\x01' * 15  # Exemplo de mensagem de ACK
+                                    com2.sendData(acknowledge)
+
+                                    # Registro do log (envio de confirmação)
+                                    instante_envio = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime())
+                                    log_evento_servidor(instante_envio, "envio", "ok", len(acknowledge), i+1, tamanho_loop, None)
+
+                                    com2.rx.clearBuffer()
+                                    index_anterior += 1
+                                    confirmando_pacote = False
+                                    payload += payload_recebido
+                                else:
+                                    print('Erro de CRC, pedindo reenvio do pacote')
+                                    reenvio = b'\x00' * 15  # Exemplo de mensagem de erro CRC
+                                    com2.sendData(reenvio)
+                                    # Registro do log (envio de erro CRC)
+                                    instante_envio = time.strftime("%d/%m/%Y %H:%M:%S", time.localtime())
+                                    log_evento_servidor(instante_envio, "envio", "erro", len(reenvio), i+1, tamanho_loop, crc_calculado)
                             else:
                                 com2.rx.clearBuffer()
                                 time.sleep(0.1)
-                                print('erro no eop, pedindo o reenvio do pacote')
-                                reenvio =b'\x12\x11\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                                reenvio += b'\x10\x10\x10'
+                                print('Erro no EOP, pedindo reenvio do pacote')
+                                reenvio = b'\x12' * 15  # Exemplo de mensagem de erro EOP
                                 com2.sendData(reenvio)
                         else:
                             time.sleep(0.1)
                             com2.rx.clearBuffer()
-                            print(f'erro no numero do pacote era esperado {index_anterior+1} e recebemos {index_do_pacote}, pedindo o reenvio do pacote')
-                            reenvio =b'\x00\x00\x00\x00\x00\x00\x06\x05\x04\x03\x02\x01'
-                            reenvio += b'\x10\x10\x10'
+                            print(f'Erro no número do pacote. Esperado {index_anterior+1}, mas recebido {index_do_pacote}. Pedindo reenvio do pacote.')
+                            reenvio = b'\x00' * 15  # Exemplo de mensagem de erro no número do pacote
                             com2.sendData(reenvio)
 
-                    print(f'pacote numero {index_do_pacote} armazenado')
+                    print(f'Pacote número {index_do_pacote} armazenado')
                     time.sleep(0.1)
                     pass
                 else:
-                    'tamanho do payload informado está incorreto, pedindo reenvio do pacote'
-                    reenvio =b'\x12\x11\x10\x09\x08\x07\x06\x05\x04\x03\x02\x01'
-                    reenvio += b'\x10\x10\x10'
+                    'Tamanho do payload informado está incorreto, pedindo reenvio do pacote'
+                    reenvio = b'\x12' * 15  # Exemplo de mensagem de erro de tamanho de payload
                     com2.sendData(reenvio)
 
-                if index_do_pacote == tamanho_loop:
-                    print('rodou todas as vezes o loop')
-                    print(f'tamanho do payload (do loop): {len(payload)}')
-                    break
-            break
-
-
-        while True:
-            len_rx = com2.rx.getBufferLen()
-            if len_rx >= 15:
-                rxBuffer, nRx = com2.getData(15+tamanho_payload)
-                payload += rxBuffer[12:-3]
-                index_do_pacote = rxBuffer[1]
-                print(f'pacote numero {index_do_pacote} armazenado')
-                break
+        # Verificando se recebemos todos os pacotes
         if index_do_pacote == quantidade_de_pacotes:
-            print('recebemos todos os pacotes')
+            print('Recebemos todos os pacotes')
         else:
             raise Exception('Faltaram pacotes ;-;')
-        print(f'tamanho do payload (final): {len(payload)}')
-        #########################################################################################
 
+        # Registro final do tamanho do payload
+        print(f'Tamanho do payload (final): {len(payload)}')
+
+        # Salvando a imagem recebida
         imagew = "./imgs/imageW.png"
-        f = open(imagew, 'wb')
-        f.write(payload)
+        with open(imagew, 'wb') as f:
+            f.write(payload)
 
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
-
 
     except Exception as erro:
         print("ops! :-\\")
