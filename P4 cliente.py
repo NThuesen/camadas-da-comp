@@ -17,7 +17,7 @@ def handshake(com1, tamanho_loop, tamanho_payload):
     print('Enviando Handshake')
     txbuffer = b'\x00\x00\x00\x00\x00\x00'
     txbuffer += int.to_bytes(tamanho_payload,2,'big')
-    txbuffer += int.to_bytes(tamanho_loop+1,2,'big')
+    txbuffer += int.to_bytes(tamanho_loop,2,'big')
     txbuffer += int.to_bytes(tamanho_loop,2,'big')
     txbuffer += b'\x10\x10\x10'
     com1.sendData(txbuffer)
@@ -66,7 +66,7 @@ def main():
         tamanho_img = len(image_bytes)
         resto_loop = tamanho_img % 50
         
-        tamanho_loop = int(tamanho_img/50)
+        tamanho_loop = int(tamanho_img/50) +1
         print(f'tamanho da imagem: {tamanho_img}, tamanho do loop: {tamanho_loop}')
 
         com1 = enlace(serialName)
@@ -139,12 +139,19 @@ def main():
                 print(f"pacote numero {numero_pacote} esta sendo enviado")
 
                 while True: #Loop para verificar o envio do pacote
-                    buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+                    if numero_pacote != tamanho_loop:
+                        buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+                    else:
+                        actual_imgBytes = image_bytes[-resto_loop:]
+                        print(f'enviando ultimo pacote {tamanho_loop}')
+                        print('--------------------------------------')
+                        time.sleep(0.2)
+                        enviar_ultimo_pacote(actual_imgBytes,resto_loop, tamanho_loop, com1)
                     # print(f'enviamos {buffer_enviado}')
                     
                     # Montar a mensagem de log
                     mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                    mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop+1} / {crc_enviado.hex()}'
+                    mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
                     escrever_log(mensagem_log)
 
                     time.sleep(0.1)
@@ -179,16 +186,6 @@ def main():
                             com1.rx.clearBuffer()
                     break
                 
-                 
-
-            # Fora do loop principal (payloads de 50 bytes)
-            print(f'tamanho do payload (do loop): {len(payload)}')
-
-            actual_imgBytes = image_bytes[-resto_loop:]
-            print(f'enviando ultimo pacote {tamanho_loop+1}')
-            print('--------------------------------------')
-            time.sleep(0.2)
-            enviar_ultimo_pacote(actual_imgBytes,resto_loop, tamanho_loop+1, com1)
             break
             
             #########################################################################################

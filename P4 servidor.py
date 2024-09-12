@@ -103,19 +103,6 @@ def main():
             break
             
 
-        while True:
-            len_rx = com2.rx.getBufferLen()
-            if len_rx >= 15:
-                rxBuffer, nRx = com2.getData(15+tamanho_payload)
-                payload += rxBuffer[12:-3]
-                index_do_pacote = rxBuffer[1]
-                print(f'pacote numero {index_do_pacote} armazenado')
-                break
-        if index_do_pacote == quantidade_de_pacotes:
-            print('recebemos todos os pacotes')
-        else:
-            raise Exception('Faltaram pacotes ;-;')
-        print(f'tamanho do payload (final): {len(payload)}')
         #########################################################################################
 
         imagew = "./imgs/imageW.png"
