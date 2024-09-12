@@ -3,7 +3,7 @@ from enlace import *
 import struct
 import time
 
-serialName = "COM3"  
+serialName = "COM4"  
 
 # Função para calcular CRC-16
 def calcular_crc(payload: bytes):
