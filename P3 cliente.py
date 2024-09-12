@@ -178,6 +178,7 @@ def main():
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
+        com1.disable()
     
     except Exception as erro:
         print("ops! :-\\")
