@@ -35,6 +35,21 @@ def enviar_pacote_cheio(image_bytes,index,total_pacotes,tamanho_do_prox,com1):
     print(f'tamanho txbuffer {len(txBuffer)}')
     com1.sendData(txBuffer)
     pass
+# nova versão abaixo
+def enviar_pacote_cheio(image_bytes,index,total_pacotes,tamanho_do_prox,com1):
+    txBuffer = b'\x10'  
+    #txBuffer += int.to_bytes(index,2,'big') 
+    txBuffer += int.to_bytes(index,1,'big') 
+    txBuffer += int.to_bytes(total_pacotes,1,'big')   
+    txBuffer += int.to_bytes(tamanho_do_prox,1,'big')  
+    txBuffer += b'\x00' * 8
+    txBuffer += image_bytes
+    txBuffer += b'\x10\x10\x10'
+    print('pacote que está sendo enviado')
+    print(txBuffer)
+    print(f'tamanho txbuffer {len(txBuffer)}')
+    com1.sendData(txBuffer)
+    pass
 
 def enviar_ultimo_pacote(image_bytes,tamanho,com1):
     txBuffer = b'\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x32'
