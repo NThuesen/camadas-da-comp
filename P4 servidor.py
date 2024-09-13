@@ -1,3 +1,4 @@
+from datetime import datetime
 import numpy as np
 from enlace import *
 import time
@@ -7,6 +8,11 @@ from crc import Calculator, Crc16
 calculator = Calculator(Crc16.MODBUS, optimized=True)
 
 serialName = "COM3"  
+
+# Função para escrever o log em um arquivo txt
+def escrever_log(mensagem_log):
+    with open('log_servidor.txt', 'a') as arquivo_log:
+        arquivo_log.write(mensagem_log + '\n')  # Adiciona a mensagem e quebra de linha
 
 def handshake(rxBuffer:bytes):
     com2 = enlace(serialName)
@@ -56,10 +62,21 @@ def main():
             handshake += b'\x10\x10\x10'
             tamanho_payload = int.from_bytes(rxBuffer[7:8],'big')
             tamanho_loop = int.from_bytes(rxBuffer[11:12],'big')
-            quantidade_de_pacotes = int.from_bytes(rxBuffer[9:10],'big')
             print("Handshake recebido")
             print(f'esse é o tamanho do loop: {tamanho_loop}')
+
+            # Montar a mensagem de log
+            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            mensagem_log += f'/ receb / 4 / {nRx}'
+            escrever_log(mensagem_log)
+
             com2.sendData(handshake)
+
+            # Montar a mensagem de log
+            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            mensagem_log += f'/ envio / 4 / {len(handshake)}'
+            escrever_log(mensagem_log)
+
             print("Devolvendo Handshake")
 
         com2.rx.clearBuffer()
@@ -84,6 +101,11 @@ def main():
                         rxBuffer, nRx = com2.getData(15+tamanho_payload)
                         tamanho_payload = rxBuffer[3]
                         index_do_pacote = rxBuffer[1]
+                        crc = int.from_bytes(rxBuffer[4:6], 'big')
+                        # Montar a mensagem de log
+                        mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                        mensagem_log += f'/ receb / 3 / {nRx} / {index_do_pacote} / {tamanho_payload} / {crc}'
+                        escrever_log(mensagem_log)
                         time.sleep(0.2)
                         if index_do_pacote == index_anterior + 1:
                             print('numero do pacote correto!')
@@ -97,6 +119,12 @@ def main():
                                     acknowledge =b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00'
                                     acknowledge += b'\x10\x10\x10'
                                     com2.sendData(acknowledge)
+
+                                    # Montar a mensagem de log
+                                    mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                                    mensagem_log += f'/ envio / 4 / {len(acknowledge)}'
+                                    escrever_log(mensagem_log)
+
                                     com2.rx.clearBuffer()
                                     index_anterior += 1
                                     confirmando_pacote = False
@@ -106,6 +134,12 @@ def main():
                                     reenvio =b'\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
                                     reenvio += b'\x10\x10\x10'
                                     com2.sendData(reenvio)
+
+                                    # Montar a mensagem de log
+                                    mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                                    mensagem_log += f'/ envio / 5 / {len(reenvio)}'
+                                    escrever_log(mensagem_log)
+
                                     com2.rx.clearBuffer()
                             else:
                                 time.sleep(0.1)
@@ -113,6 +147,12 @@ def main():
                                 reenvio =b'\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02'
                                 reenvio += b'\x10\x10\x10'
                                 com2.sendData(reenvio)
+
+                                # Montar a mensagem de log
+                                mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                                mensagem_log += f'/ envio / 5 / {len(reenvio)}'
+                                escrever_log(mensagem_log)
+                                
                                 com2.rx.clearBuffer()
                         else:
                             time.sleep(0.1)
@@ -120,14 +160,25 @@ def main():
                             reenvio =b'\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03'
                             reenvio += b'\x10\x10\x10'
                             com2.sendData(reenvio)
+
+                            # Montar a mensagem de log
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ envio / 5 / {len(reenvio)}'
+                            escrever_log(mensagem_log)
+
                             com2.rx.clearBuffer()
                     print(f'pacote numero {index_do_pacote} armazenado')
                     time.sleep(0.1)
                 else:
-                    'tamanho do payload informado está incorreto, pedindo reenvio do pacote'
+                    print('tamanho do payload informado está incorreto, pedindo reenvio do pacote')
                     reenvio =b'\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04'
                     reenvio += b'\x10\x10\x10'
                     com2.sendData(reenvio)
+
+                    # Montar a mensagem de log
+                    mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                    mensagem_log += f'/ envio / 5 / {len(reenvio)}'
+                    escrever_log(mensagem_log)
 
                 if index_do_pacote == tamanho_loop:
                     print('rodou todas as vezes o loop')
