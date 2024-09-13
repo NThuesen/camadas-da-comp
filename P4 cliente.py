@@ -26,6 +26,8 @@ def handshake(com1, tamanho_loop, tamanho_payload):
     escrever_log(mensagem_log)
     pass
     
+
+
 def enviar_pacote_cheio(image_bytes, index, total_pacotes, tamanho_do_prox, com1):
     # Calcular o CRC do payload (apenas image_bytes)
     crc = calculator.checksum(image_bytes)
@@ -60,6 +62,7 @@ def main():
         tamanho_img = len(image_bytes)
         resto_loop = tamanho_img % 50
         
+        print(image_bytes)
         tamanho_loop = int(tamanho_img/50) +1
         print(f'tamanho da imagem: {tamanho_img}, tamanho do loop: {tamanho_loop}')
 
@@ -124,21 +127,26 @@ def main():
             # ok = 4
             # erro = 5
             erro_de_ordem = False
+            erro_de_crc = False
             bytes_enviados = 0
             i = 0
             while i < tamanho_loop:
                 actual_imgBytes = image_bytes[i*50:(i+1)*50]
                 bytes_enviados += len(actual_imgBytes)
+                print(f'bytes enviados {bytes_enviados}')
                 i += 1
 
-                if tamanho_img-bytes_enviados>=50:
+                if tamanho_img - bytes_enviados>=50:
                     tamanho_prox = 50
                 else:
                     tamanho_prox = tamanho_img - bytes_enviados
+                print(f'tamanho prox {tamanho_prox}')
                 
-                # if not erro_de_ordem:
-                #     i = 2
-                #     erro_de_ordem = True
+                if not erro_de_ordem:
+                    i = 2
+                    erro_de_ordem = True
+                
+
 
                 numero_pacote = i
                 
@@ -146,11 +154,19 @@ def main():
                 print(f"pacote numero {numero_pacote} esta sendo enviado")
 
                 while True: #Loop para verificar o envio do pacote
-                    if numero_pacote != tamanho_loop:
+                    if  numero_pacote == tamanho_loop-1:
+                        tamanho_prox = tamanho_img - 50*numero_pacote
                         buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+                        
+
+                    elif numero_pacote != tamanho_loop:
+                        print(f'numero_pacote do while true = {numero_pacote}')
+                        buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+                       
                     else:
                         actual_imgBytes = image_bytes[-resto_loop:]
                         print(f'enviando ultimo pacote {tamanho_loop}')
+                        print(f'actual [ {actual_imgBytes}]')
                         print('--------------------------------------')
                         time.sleep(0.2)
                         buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
@@ -217,7 +233,7 @@ def main():
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
                             escrever_log(mensagem_log)
-
+                            print('alterando o index para menos 1')
                             actual_imgBytes = image_bytes[(i-1)*50:(i)*50]
 
                             buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=i, total_pacotes=tamanho_loop, tamanho_do_prox=tamanho_prox, com1=com1)

@@ -89,11 +89,12 @@ def main():
         # dados = 3
         # ok = 4
         # erro = 5
-
+    
         payload = b''
         index_do_pacote = 0
         index_anterior = 0
-        for i in range(tamanho_loop):
+        i = 0
+        while i < tamanho_loop:
             while True:
                 time.sleep(0.4)
                 len_rx = com2.rx.getBufferLen()
@@ -122,6 +123,7 @@ def main():
                                     print('CRC está correto!')
                                     time.sleep(0.1)
                                     print(f'pacote numero {index_do_pacote} armazenado')
+                                    i +=1
                                     payload += rxBuffer[12:-3]
                                     acknowledge =b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00'
                                     acknowledge += b'\x10\x10\x10'
