@@ -96,13 +96,13 @@ def main():
                 len_rx = com2.rx.getBufferLen()
                 confirmando_pacote = True
                 print(f'lenrx = {len_rx} e ele deveria ser igual a {15+tamanho_payload}')
+                # Montar a mensagem de log
                 if len_rx == 15+tamanho_payload:
                     while confirmando_pacote:
                         rxBuffer, nRx = com2.getData(15+tamanho_payload)
-                        
                         tamanho_payload = rxBuffer[3]
                         index_do_pacote = rxBuffer[1]
-                        crc = int.from_bytes(rxBuffer[4:6], 'big')
+                        crc = rxBuffer[4:6].hex()
                         # Montar a mensagem de log
                         mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                         mensagem_log += f'/ receb / 3 / {nRx} / {index_do_pacote} / {tamanho_payload} / {crc}'
@@ -170,6 +170,11 @@ def main():
 
                             com2.rx.clearBuffer()
                 else:
+                    # Montar a mensagem de log
+                    mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                    mensagem_log += f'/ receb / 3 / {len_rx}'
+                    escrever_log(mensagem_log)
+
                     print('tamanho do payload informado está incorreto, pedindo reenvio do pacote')
                     reenvio =b'\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04'
                     reenvio += b'\x10\x10\x10'

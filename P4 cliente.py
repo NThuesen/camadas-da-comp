@@ -108,6 +108,9 @@ def main():
                 time.sleep(0.1)
                 rxBuffer, nRx = com1.getData(15)
                 if nRx == 15:
+                    mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                    mensagem_log += f'/ receb / 5 / {nRx}'
+                    escrever_log(mensagem_log)
                     print('Handshake recebido com sucesso')
                 tentando_conectar = False
         
@@ -158,6 +161,7 @@ def main():
                         com1.rx.clearBuffer()
                         time.sleep(0.2)
                         resposta_servidor, nrx = com1.getData(15)
+                        
                         # print('loop do confirmar!')    
 
                         if resposta_servidor[:12] == b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00':
