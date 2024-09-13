@@ -92,13 +92,14 @@ def main():
         index_anterior = 0
         for i in range(tamanho_loop):
             while True:
-                time.sleep(0.2)
+                time.sleep(0.4)
                 len_rx = com2.rx.getBufferLen()
                 confirmando_pacote = True
-                # print(f'lenrx = {len_rx} e ele deveria ser igual a {15+tamanho_payload}')
+                print(f'lenrx = {len_rx} e ele deveria ser igual a {15+tamanho_payload}')
                 if len_rx == 15+tamanho_payload:
                     while confirmando_pacote:
                         rxBuffer, nRx = com2.getData(15+tamanho_payload)
+                        
                         tamanho_payload = rxBuffer[3]
                         index_do_pacote = rxBuffer[1]
                         crc = int.from_bytes(rxBuffer[4:6], 'big')
@@ -115,6 +116,7 @@ def main():
                                 if verificar_crc(rxBuffer):
                                     print('CRC está correto!')
                                     time.sleep(0.1)
+                                    print(f'pacote numero {index_do_pacote} armazenado')
                                     payload += rxBuffer[12:-3]
                                     acknowledge =b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00'
                                     acknowledge += b'\x10\x10\x10'
@@ -167,13 +169,12 @@ def main():
                             escrever_log(mensagem_log)
 
                             com2.rx.clearBuffer()
-                    print(f'pacote numero {index_do_pacote} armazenado')
-                    time.sleep(0.1)
                 else:
                     print('tamanho do payload informado está incorreto, pedindo reenvio do pacote')
                     reenvio =b'\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04'
                     reenvio += b'\x10\x10\x10'
                     com2.sendData(reenvio)
+                    com2.rx.clearBuffer()
 
                     # Montar a mensagem de log
                     mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
