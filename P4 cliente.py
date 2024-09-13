@@ -54,7 +54,7 @@ def main():
     try:
         print("Iniciou o main no transmissor")
 
-        with open('imgs/sol.png', 'rb') as file:
+        with open('imgs/image.png', 'rb') as file:
             image_bytes = file.read()
         
         tamanho_img = len(image_bytes)
@@ -123,17 +123,25 @@ def main():
             # dados = 3
             # ok = 4
             # erro = 5
+            erro_de_ordem = False
             bytes_enviados = 0
-            for i in range(tamanho_loop):
+            i = 0
+            while i < tamanho_loop:
                 actual_imgBytes = image_bytes[i*50:(i+1)*50]
                 bytes_enviados += len(actual_imgBytes)
+                i += 1
 
                 if tamanho_img-bytes_enviados>=50:
                     tamanho_prox = 50
                 else:
                     tamanho_prox = tamanho_img - bytes_enviados
                 
-                numero_pacote = i+1
+                # if not erro_de_ordem:
+                #     i = 2
+                #     erro_de_ordem = True
+
+                numero_pacote = i
+                
 
                 print(f"pacote numero {numero_pacote} esta sendo enviado")
 
@@ -158,9 +166,12 @@ def main():
                     esperando_confirmar = True
 
                     while esperando_confirmar:
+                        # print('chegamos no loop confirmar')
                         com1.rx.clearBuffer()
                         time.sleep(0.2)
                         resposta_servidor, nrx = com1.getData(15)
+                        # print('passou o get data')
+                        # print(resposta_servidor)
                         
                         # print('loop do confirmar!')    
 
@@ -197,14 +208,22 @@ def main():
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
 
-                        elif resposta_servidor[:12] == b'\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03':   
-                            print(f'problema no numero do pacote, reenviando o pacote numero: {numero_pacote}')
+                        elif resposta_servidor[:11] == b'\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03':  
+                            # print(resposta_servidor)
+                            # print(resposta_servidor[11:12]) 
+                            i = int.from_bytes(resposta_servidor[11:12], 'big')
+                            numero_pacote = i
+                            print(f'problema no numero do pacote, reenviando o pacote numero: {i}')
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
                             escrever_log(mensagem_log)
-                            buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+
+                            actual_imgBytes = image_bytes[(i-1)*50:(i)*50]
+
+                            buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=i, total_pacotes=tamanho_loop, tamanho_do_prox=tamanho_prox, com1=com1)
+                            
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                            mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
+                            mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {i} / {tamanho_loop} / {crc_enviado.hex()}'
 
                         else:
                             com1.rx.clearBuffer()

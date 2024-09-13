@@ -9,6 +9,9 @@ calculator = Calculator(Crc16.MODBUS, optimized=True)
 
 serialName = "COM3"  
 
+with open('imgs/image.png', 'rb') as file:
+            imagem_ideal = file.read()
+
 # Função para escrever o log em um arquivo txt
 def escrever_log(mensagem_log):
     with open('log_servidor.txt', 'a') as arquivo_log:
@@ -102,6 +105,8 @@ def main():
                         rxBuffer, nRx = com2.getData(15+tamanho_payload)
                         tamanho_payload = rxBuffer[3]
                         index_do_pacote = rxBuffer[1]
+                        if index_do_pacote == 72:
+                            print(f'tamanho do proximo payload = {tamanho_payload}')
                         crc = rxBuffer[4:6].hex()
                         # Montar a mensagem de log
                         mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -159,7 +164,9 @@ def main():
                         else:
                             time.sleep(0.1)
                             print(f'erro no numero do pacote era esperado {index_anterior+1} e recebemos {index_do_pacote}, pedindo o reenvio do pacote')
-                            reenvio =b'\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03'
+                            reenvio =b'\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03'
+                            reenvio += int.to_bytes(index_anterior+1,1,'big')
+                            print(f"valor add ao reenvio: {int.to_bytes(index_anterior+1,1,'big')}")
                             reenvio += b'\x10\x10\x10'
                             com2.sendData(reenvio)
 
@@ -192,7 +199,9 @@ def main():
                     break
             break
             
-
+        for index in range(len(payload)):
+            if payload[index] != imagem_ideal[index]:
+                print(f'byte numero: {index} errado')
         #########################################################################################
 
         imagew = "./imgs/imageW.png"
