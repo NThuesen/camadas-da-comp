@@ -35,7 +35,7 @@ def enviar_pacote_cheio(image_bytes, index, total_pacotes, tamanho_do_prox, com1
     txBuffer += int.to_bytes(index, 1, 'big')  # Índice do pacote
     txBuffer += int.to_bytes(total_pacotes, 1, 'big')  # Total de pacotes
     txBuffer += int.to_bytes(tamanho_do_prox, 1, 'big')  # Tamanho do próximo pacote
-    txBuffer += crc.to_bytes(2, 'big')  # Anexar o CRC no head
+    txBuffer += int.to_bytes(crc, 2, 'big')  # Anexar o CRC no head
     txBuffer += b'\x00' * 6  # Preencher o restante do cabeçalho
 
     # Anexar o payload (dados)
@@ -148,7 +148,7 @@ def main():
                     
                     # Montar a mensagem de log
                     mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                    mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
+                    mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
                     escrever_log(mensagem_log)
 
                     time.sleep(0.1)
@@ -166,33 +166,41 @@ def main():
                             mensagem_log += f'/ receb  / 4 / {len(resposta_servidor)}'
                             esperando_confirmar = False
 
+                        elif resposta_servidor[:12] == b'\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01':
+                            print(f'problema no CRC, reenviando o pacote numero: {numero_pacote}')
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
+                            escrever_log(mensagem_log)                        
+                            buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
 
                         elif resposta_servidor[:12] ==  b'\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02':
                             print(f'problema no eop, reenviando o pacote numero: {numero_pacote}')
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
                             escrever_log(mensagem_log)
-                            enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+                            buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                            mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
+                            mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
 
                         elif resposta_servidor[:12] ==  b'\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04':
                             print(f'problema no tamanho do payload, reenviando o pacote numero: {numero_pacote}')
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
                             escrever_log(mensagem_log)
-                            enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+                            buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                            mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
+                            mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
 
                         elif resposta_servidor[:12] == b'\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03':   
                             print(f'problema no numero do pacote, reenviando o pacote numero: {numero_pacote}')
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
                             escrever_log(mensagem_log)
-                            enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
+                            buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                            mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
+                            mensagem_log += f'/ envio / 3 / {len(buffer_enviado)} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
 
                         else:
                             com1.rx.clearBuffer()

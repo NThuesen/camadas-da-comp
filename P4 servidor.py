@@ -1,7 +1,10 @@
 import numpy as np
 from enlace import *
 import time
+from crc import Calculator, Crc16
 
+# Inicializar o calculador de CRC-16 usando a variante MODBUS
+calculator = Calculator(Crc16.MODBUS, optimized=True)
 
 serialName = "COM3"  
 
@@ -11,6 +14,23 @@ def handshake(rxBuffer:bytes):
     print("Devolvendo o handshake")
     com2.sendData(rxBuffer[1:10])
     return rxBuffer[0]
+
+def verificar_crc(rxBuffer):
+    # Extrair o payload (dados)
+    payload = rxBuffer[12:-3]  # Assumindo que o payload começa no byte 12 e vai até o EOP
+
+    # Recalcular o CRC do payload
+    crc_calculado = calculator.checksum(payload)
+
+    # Extrair o CRC do cabeçalho (bytes 4 e 5)
+    crc_recebido = int.from_bytes(rxBuffer[4:6], 'big')  # Aqui, corrige-se o intervalo para 4:6 (pegando os dois bytes)
+
+    # Comparar os CRCs
+    if crc_calculado == crc_recebido:
+        return True
+    else:
+        print(f'CRC calculado: {crc_calculado}, CRC recebido: {crc_recebido}')
+        return False
     
 def main():
     try:
@@ -49,7 +69,7 @@ def main():
         # dados = 3
         # ok = 4
         # erro = 5
-        
+
         payload = b''
         index_do_pacote = 0
         index_anterior = 0
@@ -70,14 +90,23 @@ def main():
                             time.sleep(0.1)
                             if rxBuffer[-3:] == b'\x10\x10\x10':
                                 print('eop tambem está correto!')
-                                time.sleep(0.1)
-                                payload += rxBuffer[12:-3]
-                                acknowledge =b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00'
-                                acknowledge += b'\x10\x10\x10'
-                                com2.sendData(acknowledge)
-                                com2.rx.clearBuffer()
-                                index_anterior += 1
-                                confirmando_pacote = False
+                                if verificar_crc(rxBuffer):
+                                    print('CRC está correto!')
+                                    time.sleep(0.1)
+                                    payload += rxBuffer[12:-3]
+                                    acknowledge =b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00'
+                                    acknowledge += b'\x10\x10\x10'
+                                    com2.sendData(acknowledge)
+                                    com2.rx.clearBuffer()
+                                    index_anterior += 1
+                                    confirmando_pacote = False
+                                else:
+                                    time.sleep(0.1)
+                                    print('erro no crc, pedindo o reenvio do pacote')
+                                    reenvio =b'\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01'
+                                    reenvio += b'\x10\x10\x10'
+                                    com2.sendData(reenvio)
+                                    com2.rx.clearBuffer()
                             else:
                                 time.sleep(0.1)
                                 print('erro no eop, pedindo o reenvio do pacote')
