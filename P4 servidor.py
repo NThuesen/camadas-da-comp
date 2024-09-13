@@ -46,6 +46,10 @@ def main():
         print("Preparado para receber dados")
 
         #########################################################################################
+        # dados = 3
+        # ok = 4
+        # erro = 5
+        
         payload = b''
         index_do_pacote = 0
         index_anterior = 0

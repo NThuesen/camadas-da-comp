@@ -114,7 +114,9 @@ def main():
             print('iniciando transmissão de dados')
 
             #########################################################################################
-            payload = b''
+            # dados = 3
+            # ok = 4
+            # erro = 5
             bytes_enviados = 0
             for i in range(tamanho_loop):
                 actual_imgBytes = image_bytes[i*50:(i+1)*50]
@@ -157,25 +159,41 @@ def main():
 
                         if resposta_servidor[:12] == b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00':
                             print('pacote enviado com sucesso!')
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ receb  / 4 / {len(resposta_servidor)}'
                             esperando_confirmar = False
 
 
                         elif resposta_servidor[:12] ==  b'\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02\x02':
                             print(f'problema no eop, reenviando o pacote numero: {numero_pacote}')
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
+                            escrever_log(mensagem_log)
                             enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
-                    
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
 
                         elif resposta_servidor[:12] ==  b'\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04\x04':
                             print(f'problema no tamanho do payload, reenviando o pacote numero: {numero_pacote}')
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
+                            escrever_log(mensagem_log)
                             enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
-
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
 
                         elif resposta_servidor[:12] == b'\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03\x03':   
                             print(f'problema no numero do pacote, reenviando o pacote numero: {numero_pacote}')
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ receb  / 5 / {len(resposta_servidor)}'
+                            escrever_log(mensagem_log)
                             enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
-
+                            mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                            mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
+                            
                         else:
                             com1.rx.clearBuffer()
+                        escrever_log(mensagem_log)
                     break
                 
             break
