@@ -47,15 +47,6 @@ def enviar_pacote_cheio(image_bytes, index, total_pacotes, tamanho_do_prox, com1
     # Retornar o buffer e o CRC calculado
     return txBuffer, crc.to_bytes(2, 'big')
 
-def enviar_ultimo_pacote(image_bytes,tamanho, index, com1):
-    txBuffer = b'\x10'
-    txBuffer += int.to_bytes(index,1,'big') 
-    txBuffer += b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x32'
-    txBuffer += image_bytes[:tamanho]
-    txBuffer += b'\x10\x10\x10'
-    com1.sendData(txBuffer)
-    return txBuffer
-
 def main():
     try:
         print("Iniciou o main no transmissor")
@@ -146,7 +137,8 @@ def main():
                         print(f'enviando ultimo pacote {tamanho_loop}')
                         print('--------------------------------------')
                         time.sleep(0.2)
-                        enviar_ultimo_pacote(actual_imgBytes,resto_loop, tamanho_loop, com1)
+                        buffer_enviado, crc_enviado = enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )
+                   
                     # print(f'enviamos {buffer_enviado}')
                     
                     # Montar a mensagem de log
@@ -161,7 +153,7 @@ def main():
                         com1.rx.clearBuffer()
                         time.sleep(0.2)
                         resposta_servidor, nrx = com1.getData(15)
-                        print('loop do confirmar!')    
+                        # print('loop do confirmar!')    
 
                         if resposta_servidor[:12] == b'\x01\x02\x03\x04\x05\x06\x00\x00\x00\x00\x00\x00':
                             print('pacote enviado com sucesso!')
