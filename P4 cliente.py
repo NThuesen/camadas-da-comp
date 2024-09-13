@@ -21,6 +21,9 @@ def handshake(com1, tamanho_loop, tamanho_payload):
     txbuffer += int.to_bytes(tamanho_loop,2,'big')
     txbuffer += b'\x10\x10\x10'
     com1.sendData(txbuffer)
+    mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    mensagem_log += f'/ envio / 4 / {len(txbuffer)}'
+    escrever_log(mensagem_log)
     pass
     
 def enviar_pacote_cheio(image_bytes, index, total_pacotes, tamanho_do_prox, com1):
@@ -190,7 +193,7 @@ def main():
                             enviar_pacote_cheio(actual_imgBytes, index=numero_pacote , total_pacotes= tamanho_loop, tamanho_do_prox= tamanho_prox, com1= com1 )   
                             mensagem_log = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             mensagem_log += f'/ envio / 3 / {tamanho_prox} / {numero_pacote} / {tamanho_loop} / {crc_enviado.hex()}'
-                            
+
                         else:
                             com1.rx.clearBuffer()
                         escrever_log(mensagem_log)
