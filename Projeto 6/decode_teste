@@ -1,0 +1,76 @@
+#Importe todas as bibliotecas
+from suaBibSignal import *
+import peakutils    #alternativas  #from detect_peaks import *   #import pickle
+import numpy as np
+import sounddevice as sd
+import matplotlib.pyplot as plt
+import time
+from scipy.io.wavfile import write
+
+
+#funcao para transformas intensidade acustica em dB, caso queira usar
+def todB(s):
+    sdB = 10*np.log10(s)
+    return(sdB)
+
+
+def main():
+
+    #instruções*******************************
+ 
+    #declare um objeto da classe da sua biblioteca de apoio (cedida)   
+    # algo como:
+    signal = signalMeu() 
+    freqDeAmostragem = 44100
+
+    #voce importou a bilioteca sounddevice como, por exemplo, sd. entao
+    # os seguintes parametros devem ser setados:
+    sd.default.samplerate = freqDeAmostragem #taxa de amostragem
+    sd.default.channels = 1#numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas.
+    #Muitas vezes a gravação retorna uma lista de listas. Você poderá ter que tratar o sinal gravado para ter apenas uma lista.
+    tempo = 4
+    duration =  tempo # #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic   
+    #calcule o numero de amostras "numAmostras" que serao feitas (numero de aquisições) durante a gravação. Para esse cálculo você deverá utilizar a taxa de amostragem e o tempo de gravação
+    #faca um print na tela dizendo que a captação comecará em n segundos. e então 
+    #use um time.sleep para a espera.
+   
+    #A seguir, faca um print informando que a gravacao foi inicializada
+
+    #para gravar, utilize
+    numAmostras = tempo*freqDeAmostragem
+    audio = sd.rec(int(numAmostras), freqDeAmostragem, channels=1)
+    # data = np.random.uniform(-2,2, freqDeAmostragem)
+    # scaled = np.int16(data / np.max(np.abs(data)) * 32767)
+    # sd.wait()
+
+    # write('test.wav', audio, freqDeAmostragem)
+    sd.wait()
+    print("...     FIM")
+    print(audio)
+    #analise sua variavel "audio". pode ser um vetor com 1 ou 2 colunas, ou uma lista, ou ainda uma lista de listas (isso dependerá do seu sistema, drivers etc...).
+    #extraia a parte que interessa da gravação (as amostras) gravando em uma variável "dados". Isso porque a variável audio pode conter dois canais e outas informações). 
+    fs = 44100
+    T = 4
+    # use a funcao linspace e crie o vetor tempo. Um instante correspondente a cada amostra!
+    t   = np.linspace(-T/2,T/2,T*fs)
+
+    # plot do áudio gravado (dados) vs tempo! Não plote todos os pontos, pois verá apenas uma mancha (freq altas) . 
+    plt.plot(t[:1000],audio[:1000])
+    
+    ## Calcule e plote o Fourier do sinal audio. como saída tem-se a amplitude e as frequências.
+    dados = audio.flatten() 
+    xf, yf = signal.calcFFT( dados, fs)
+    
+    dicionary_xf_yf =dict(zip(xf,np.abs(yf)))
+    plt.stem(xf,np.abs(yf))
+    chaves_ordenadas = sorted(dicionary_xf_yf.values(), reverse=True)
+
+    # Pegar as 5 maiores chaves
+    maiores_chaves = chaves_ordenadas[:10]
+
+    # Obter os valores correspondentes às 5 maiores chaves
+    valores_maiores_chaves = [int(dicionary_xf_yf[chave]) for chave in maiores_chaves]
+
+    print("Valores das 5 maiores chaves:", valores_maiores_chaves)
+    print()
+    plt.show()
