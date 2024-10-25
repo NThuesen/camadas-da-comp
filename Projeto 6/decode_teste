@@ -64,8 +64,6 @@ def main():
     plt.title("Áudio capturado - Domínio do Tempo")
     plt.xlabel("Tempo [s]")
     plt.ylabel("Amplitude")
-    plt.show()
-
     # Converter o áudio para uma única lista (necessário caso o áudio tenha mais de um canal)
     dados = audio.flatten()  # 'flatten()' transforma uma matriz multidimensional em um array unidimensional
 
@@ -74,19 +72,54 @@ def main():
 
     # Plot da Transformada de Fourier do sinal
     plt.figure()
-    plt.plot(xf, yf)
+    plt.stem(xf, yf)
     plt.title("Transformada de Fourier do Sinal Gravado")
     plt.xlabel("Frequência [Hz]")
     plt.ylabel("Magnitude")
-    plt.show()
+    dicio = dict(zip(xf, np.abs(yf)))
 
-    # Detecção dos picos na Transformada de Fourier (nas frequências mais intensas)
-    indexes = peakutils.indexes(yf, thres=0.15, min_dist=45)  
-    # 'peakutils.indexes' identifica os picos de 'yf' acima de um limite de 0.15, com uma distância mínima entre picos de 45 pontos
-    freqs_de_pico = xf[indexes]  # Associa os índices dos picos às frequências correspondentes
+    # Ordena as frequências de pico pela magnitude em ordem decrescente
+    sorted_peaks = sorted((dicio.values()), reverse=True)
+    # Encontra as chaves correspondentes aos valores em sorted_peaks
+    keys_sorted_peaks = []
+    for peak in sorted_peaks[:300]:
+        for key, value in dicio.items():
+            if value == peak:
+                keys_sorted_peaks.append(key)
+                
+    freqs_de_pico = [freq for freq in keys_sorted_peaks]
+    print(f"Frequências de pico identificadas: {sorted((freqs_de_pico), reverse=True)}")
+    max_picos = freqs_de_pico[:100]  # Obtém as 5 maiores frequências de pico
+    #printe os picos encontrados!
+    list_max_viables = []
+    for valores in max_picos:
+        if 500< valores < 2000:
+            list_max_viables.append(valores)
+            
+    print(f"AAAAAAAAAAAAAAAAA de 5 picos identificados ({len(list_max_viables)} picos), ajustando parâmetros.")
+    
+    
+    for val1, val2 in dtmf_frequencies.values():
+        val1_2mais = val1 + 2
+        val1_2menos = val1 - 2
+        val2_2mais = val2 + 2
+        val2_2menos = val2 - 2
+        for valores in list_max_viables:
+            if val1_2mais > valores > val1_2menos:
+                freqs_de_pico.append(val1)
+            if val2_2mais > valores > val2_2menos:
+                freqs_de_pico.append(val2)
+    
+    freq = (val1, val2) 
+    for key, value in dtmf_frequencies.items():
+    # Ajusta os parâmetros novamente para detectar mais picos, se necessário
+        if freq == value or reversed(freq) == value:
+            print(f"Tecla pressionada: {key}")
+            
+        
 
-    print("Frequências identificadas nos picos: ", freqs_de_pico)
 
+    
     # Determina a tecla pressionada comparando as frequências dos picos detectados com o dicionário 'dtmf_frequencies'
     for tecla, (f1, f2) in dtmf_frequencies.items():
         if any(np.isclose(freqs_de_pico, f1, atol=5)) and any(np.isclose(freqs_de_pico, f2, atol=5)):
