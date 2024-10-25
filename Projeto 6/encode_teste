@@ -6,36 +6,28 @@ import matplotlib.pyplot as plt
 from scipy import signal
 from scipy.fftpack import fft, fftshift
 
-#funções caso queriram usar para sair...
-# def signal_handler(signal, frame):
-#         print('You pressed Ctrl+C!')
-#         sys.exit(0)
-
-#converte intensidade em Db, caso queiram ...
+# Converte a intensidade em decibéis, caso queira usá-la para representar o nível de intensidade do sinal.
 def todB(s):
     sdB = 10*np.log10(s)
     return(sdB)
 
-
+# Função para gerar uma senoide, com frequência (freq), tempo de duração (time) e taxa de amostragem (fs)
 def generateSin(freq, time, fs):
-    n = time*fs #numero de pontos
-    x = np.linspace(0.0, time, n)  # eixo do tempo
-    s = np.sin(freq*x*2*np.pi)
-    # plt.figure()
-    # plt.plot(x,s)
+    n = time*fs  # número de pontos da senoide
+    x = np.linspace(0.0, time, n)  # cria o vetor de tempo (x)
+    s = np.sin(freq*x*2*np.pi)  # cria a senoide para a frequência dada
     return (x, s)
 
-
+# Função para calcular a Transformada de Fourier de um sinal
 def calcFFT(signal, fs):
-    # https://docs.scipy.org/doc/scipy/reference/tutorial/fftpack.html
-    #y  = np.append(signal, np.zeros(len(signal)*fs))
+    # O número de amostras no sinal
     N  = len(signal)
-    T  = 1/fs
-    xf = np.linspace(-1.0/(2.0*T), 1.0/(2.0*T), N)
-    yf = fft(signal)
-    return(xf, fftshift(yf))
+    T  = 1/fs  # intervalo de tempo entre amostras
+    xf = np.linspace(-1.0/(2.0*T), 1.0/(2.0*T), N)  # cria eixo de frequências
+    yf = fft(signal)  # executa a Transformada Rápida de Fourier
+    return(xf, fftshift(yf))  # fftshift reorganiza a FFT para visualização simétrica
 
-
+# Frequências DTMF, associando teclas a pares de frequências (ex.: tecla '1' tem as frequências 679 Hz e 1209 Hz)
 dtmf_frequencies = {
     '1': (679, 1209),
     '2': (679, 1336),
@@ -55,80 +47,65 @@ dtmf_frequencies = {
     'D': (941,1633),
 }
 
-def take_frequence(tecla) :
-    freq = dtmf_frequencies[str(tecla)]
+# Função para pegar as frequências associadas à tecla pressionada
+def take_frequence(tecla):
+    freq = dtmf_frequencies[str(tecla)]  # obtem as duas frequências associadas à tecla
     return freq
 
-
 def main():
-    
-   
-    #*instruções********************************************** 
-    # Seu objetivo aqui é gerar duas senoides. Cada uma com frequencia corresposndente à tecla pressionada, conforme tabela DTMF. OK
-    # Então, inicialmente peça ao usuário para digitar uma tecla do teclado numérico DTMF. OK
-    # De posse das duas frequeências, agora voce tem que gerar, por alguns segundos suficientes para a outra aplicação gravar o audio, duas senoides com as frequencias corresposndentes à tecla pressionada.
-    # Essas senoides têm que ter taxa de amostragem de 44100 amostras por segundo, sendo assim, voce tera que gerar uma lista de tempo correspondente a isso e entao gerar as senoides
-    # Lembre-se que a senoide pode ser construída com A*sin(2*pi*f*t).
-    # O tamanho da lista tempo estará associada à duração do som. A intensidade é controlada pela constante A (amplitude da senoide). Construa com amplitude 1.
-    # Some as duas senoides. A soma será o sinal a ser emitido.
-    # Utilize a funcao da biblioteca sounddevice para reproduzir o som. Entenda seus argumento.
-    # Você pode gravar o som com seu celular ou qualquer outro microfone para o lado receptor decodificar depois. Ou reproduzir enquanto o receptor já capta e decodifica.
-    
-    # construa o gráfico do sinal emitido e o gráfico da transformada de Fourier. Cuidado, como as frequencias sao relativamente altas, voce deve plotar apenas alguns pontos (alguns periodos) para conseguirmos ver o sinal
     
     print("Inicializando encoder")
     print("Aguardando usuário")
 
+    # Solicita que o usuário digite uma tecla DTMF. Repete até obter uma tecla válida.
     tecla = input("Digite uma tecla do teclado numérico DTMF: ")
     while tecla not in dtmf_frequencies.keys():
-        tecla = input("Insira uma do teclado numérico DTMF: ")
+        tecla = input("Insira uma tecla do teclado numérico DTMF: ")
+    
+    # Obtém as duas frequências associadas à tecla pressionada
     frequencias = take_frequence(tecla)
-    print( f' Frequências desejadas: {frequencias}')
+    print(f'Frequências desejadas: {frequencias}')
 
-    fs  = 44100   # pontos por segundo (frequência de amostragem)
-    T   = 4     # Tempo em que o seno será gerado
-    t   = np.linspace(-T/2,T/2,T*fs)
+    fs  = 44100  # taxa de amostragem em pontos por segundo
+    T   = 4  # duração do sinal em segundos
+    t   = np.linspace(-T/2, T/2, T*fs)  # cria um vetor de tempo com duração T
+    
     sinais = []
 
+    # Gera uma senoide para cada uma das duas frequências da tecla
     for frequencia in frequencias:
-        x,y = generateSin(frequencia,T , fs)
-        
+        x, y = generateSin(frequencia, T, fs)  # gera a senoide
         plt.figure(figsize=(10, 4))
-        plt.plot(t[:1000], y[:1000])
+        plt.plot(t[:1000], y[:1000])  # plota apenas 1000 pontos para visualização
         plt.title('Sinal DTMF no Domínio do Tempo')
         plt.xlabel('Tempo (s)')
         plt.ylabel('Amplitude')
-        
-        
-        sinais.append(y)
+        sinais.append(y)  # armazena o sinal gerado em uma lista
 
+    # Soma as duas senoides para obter o tom DTMF
     senos_somados = sinais[0] + sinais[1]
     plt.figure(figsize=(10, 4))
-    plt.plot(t[:1000], senos_somados[:1000])
-    plt.title(f'Sinais somados')
+    plt.plot(t[:1000], senos_somados[:1000])  # exibe apenas alguns pontos para visualização
+    plt.title('Sinais somados')
     plt.xlabel('Tempo (s)')
     plt.ylabel('Amplitude')
     
-    # Plotando o sinal no domínio da frequência
+    # Exibe o espectro do sinal somado no domínio da frequência
     plt.figure()
     plt.magnitude_spectrum(senos_somados, Fs=fs)
     plt.title('Sinal DTMF no Domínio da Frequência')
     plt.xlabel('Frequência [Hz]')
     plt.ylabel('Magnitude')
 
-
-    tone = senos_somados
+    tone = senos_somados  # define o tom DTMF a ser emitido
 
     print("Gerando Tons base")
     print("Executando as senoides (emitindo o som)")
     print("Gerando Tom referente ao símbolo : {}".format(tecla))
-    sd.play(tone, fs)
-    # aguarda fim do audio
-    sd.wait()
-    
-    # plotFFT(self, signal, fs)
-    # # Exibe gráficos
-    plt.show()
+    sd.play(tone, fs)  # emite o tom DTMF gerado pelo sistema de som
+    sd.wait()  # aguarda o término do áudio para seguir o código
+
+    plt.show()  # exibe todos os gráficos gerados
 
 if __name__ == "__main__":
     main()
