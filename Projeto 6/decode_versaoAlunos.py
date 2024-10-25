@@ -25,10 +25,10 @@ def main():
        
     #voce importou a bilioteca sounddevice como, por exemplo, sd. entao
     # os seguintes parametros devem ser setados:
-    sd.default.samplerate = #taxa de amostragem
-    sd.default.channels = #numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas.
+    # sd.default.samplerate = #taxa de amostragem
+    # sd.default.channels = #numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas.
     #Muitas vezes a gravação retorna uma lista de listas. Você poderá ter que tratar o sinal gravado para ter apenas uma lista.
-    duration =  tempo # #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic   
+    # duration =  tempo # #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic   
     #calcule o numero de amostras "numAmostras" que serao feitas (numero de aquisições) durante a gravação. Para esse cálculo você deverá utilizar a taxa de amostragem e o tempo de gravação
     #faca um print na tela dizendo que a captação comecará em n segundos. e então 
     #use um time.sleep para a espera.
@@ -36,7 +36,7 @@ def main():
     #A seguir, faca um print informando que a gravacao foi inicializada
 
     #para gravar, utilize
-    audio = sd.rec(int(numAmostras), freqDeAmostragem, channels=1)
+    # audio = sd.rec(int(numAmostras), freqDeAmostragem, channels=1)
     sd.wait()
     print("...     FIM")
 
@@ -49,7 +49,7 @@ def main():
     # plot do áudio gravado (dados) vs tempo! Não plote todos os pontos, pois verá apenas uma mancha (freq altas) . 
        
     ## Calcule e plote o Fourier do sinal audio. como saída tem-se a amplitude e as frequências.
-    xf, yf = signal.calcFFT(y, fs)
+    # xf, yf = signal.calcFFT(y, fs)
     
     #Agora você terá que analisar os valores xf e yf e encontrar em quais frequências estão os maiores valores (picos de yf) de da transformada.
     #Encontrando essas frequências de maior presença (encontre pelo menos as 5 mais presentes, ou seja, as 5 frequências que apresentam os maiores picos de yf). 

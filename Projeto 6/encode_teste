@@ -115,7 +115,7 @@ def main():
     plt.title('Sinal DTMF no Domínio da Frequência')
     plt.xlabel('Frequência [Hz]')
     plt.ylabel('Magnitude')
-    plt.show()
+
 
     tone = senos_somados
 
