@@ -78,21 +78,24 @@ def main():
     
     print("Inicializando encoder")
     print("Aguardando usuário")
-    tecla = input("Insira uma do teclado numérico DTMF: ")
+
+    tecla = input("Digite uma tecla do teclado numérico DTMF: ")
     while tecla not in dtmf_frequencies.keys():
         tecla = input("Insira uma do teclado numérico DTMF: ")
     frequencias = take_frequence(tecla)
     print( f' Frequências desejadas: {frequencias}')
+
     fs  = 44100   # pontos por segundo (frequência de amostragem)
     T   = 4     # Tempo em que o seno será gerado
     t   = np.linspace(-T/2,T/2,T*fs)
     sinais = []
+
     for frequencia in frequencias:
         x,y = generateSin(frequencia,T , fs)
         
         plt.figure(figsize=(10, 4))
         plt.plot(t[:1000], y[:1000])
-        plt.title(f'Sinal - Frequência: {frequencia} Hz')
+        plt.title('Sinal DTMF no Domínio do Tempo')
         plt.xlabel('Tempo (s)')
         plt.ylabel('Amplitude')
         
@@ -106,6 +109,14 @@ def main():
     plt.xlabel('Tempo (s)')
     plt.ylabel('Amplitude')
     
+    # Plotando o sinal no domínio da frequência
+    plt.figure()
+    plt.magnitude_spectrum(senos_somados, Fs=fs)
+    plt.title('Sinal DTMF no Domínio da Frequência')
+    plt.xlabel('Frequência [Hz]')
+    plt.ylabel('Magnitude')
+    plt.show()
+
     tone = senos_somados
 
     print("Gerando Tons base")
@@ -117,7 +128,6 @@ def main():
     
     # plotFFT(self, signal, fs)
     # # Exibe gráficos
-    # plt.show()
     plt.show()
 
 if __name__ == "__main__":

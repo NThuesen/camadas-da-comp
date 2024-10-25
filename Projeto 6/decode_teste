@@ -13,6 +13,24 @@ def todB(s):
     sdB = 10*np.log10(s)
     return(sdB)
 
+dtmf_frequencies = {
+    '1': (679, 1209),
+    '2': (679, 1336),
+    '3': (679, 1477),
+    '4': (770, 1209),
+    '5': (770, 1336),
+    '6': (770, 1477),
+    '7': (825, 1209),
+    '8': (825, 1336),
+    '9': (825, 1477),
+    '0': (941, 1336),
+    '*': (941, 1209),
+    '#': (941, 1477),
+    'A': (679,1633),
+    'B': (770,1633),
+    'C': (825,1633),
+    'D': (941,1633),
+}
 
 def main():
 
@@ -21,11 +39,10 @@ def main():
     #declare um objeto da classe da sua biblioteca de apoio (cedida)   
     # algo como:
     signal = signalMeu() 
-    freqDeAmostragem = 44100
 
     #voce importou a bilioteca sounddevice como, por exemplo, sd. entao
     # os seguintes parametros devem ser setados:
-    sd.default.samplerate = freqDeAmostragem #taxa de amostragem
+    sd.default.samplerate = 44100 #taxa de amostragem
     sd.default.channels = 1#numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas.
     #Muitas vezes a gravação retorna uma lista de listas. Você poderá ter que tratar o sinal gravado para ter apenas uma lista.
     tempo = 4
@@ -37,40 +54,63 @@ def main():
     #A seguir, faca um print informando que a gravacao foi inicializada
 
     #para gravar, utilize
-    numAmostras = tempo*freqDeAmostragem
-    audio = sd.rec(int(numAmostras), freqDeAmostragem, channels=1)
-    # data = np.random.uniform(-2,2, freqDeAmostragem)
-    # scaled = np.int16(data / np.max(np.abs(data)) * 32767)
-    # sd.wait()
 
-    # write('test.wav', audio, freqDeAmostragem)
+    numAmostras = tempo*sd.default.samplerate
+
+    print("A gravação começará em 3 segundos")
+    time.sleep(3)
+    print("Gravação iniciada")
+
+    audio = sd.rec(int(numAmostras), sd.default.samplerate, channels=1)
+
     sd.wait()
-    print("...     FIM")
-    print(audio)
+    print("Gravacao finalizada")
+
     #analise sua variavel "audio". pode ser um vetor com 1 ou 2 colunas, ou uma lista, ou ainda uma lista de listas (isso dependerá do seu sistema, drivers etc...).
     #extraia a parte que interessa da gravação (as amostras) gravando em uma variável "dados". Isso porque a variável audio pode conter dois canais e outas informações). 
-    fs = 44100
     T = 4
     # use a funcao linspace e crie o vetor tempo. Um instante correspondente a cada amostra!
-    t   = np.linspace(-T/2,T/2,T*fs)
+    t   = np.linspace(-T/2,T/2,T*sd.default.samplerate)
 
     # plot do áudio gravado (dados) vs tempo! Não plote todos os pontos, pois verá apenas uma mancha (freq altas) . 
-    plt.plot(t[:1000],audio[:1000])
+    plt.figure()
+    plt.plot(t[:1000], audio[:1000])  # Plotando apenas os primeiros 1000 pontos
+    plt.title("Áudio capturado - Domínio do Tempo")
+    plt.xlabel("Tempo [s]")
+    plt.ylabel("Amplitude")
+    plt.show() 
     
     ## Calcule e plote o Fourier do sinal audio. como saída tem-se a amplitude e as frequências.
     dados = audio.flatten() 
-    xf, yf = signal.calcFFT( dados, fs)
+    xf, yf = signal.calcFFT( dados, sd.default.samplerate)
     
-    dicionary_xf_yf =dict(zip(xf,np.abs(yf)))
-    plt.stem(xf,np.abs(yf))
-    chaves_ordenadas = sorted(dicionary_xf_yf.values(), reverse=True)
+    # Plotando o sinal no domínio da frequência (Fourier)
+    plt.figure()
+    plt.plot(xf, yf)
+    plt.title("Transformada de Fourier do Sinal Gravado")
+    plt.xlabel("Frequência [Hz]")
+    plt.ylabel("Magnitude")
+    plt.show() 
 
-    # Pegar as 5 maiores chaves
-    maiores_chaves = chaves_ordenadas[:10]
 
-    # Obter os valores correspondentes às 5 maiores chaves
-    valores_maiores_chaves = [int(dicionary_xf_yf[chave]) for chave in maiores_chaves]
+    indexes = peakutils.indexes(yf, thres=0.15, min_dist=45)
+    freqs_de_pico = xf[indexes]
+    
+    #printe os picos encontrados! 
+    if len(indexes) < 5:
+        print(f"Menos de 5 picos identificados ({len(indexes)} picos), ajustando parâmetros.")
+        # Ajusta os parâmetros novamente para detectar mais picos, se necessário
+        indexes = peakutils.indexes(yf, thres=0.05, min_dist=30)
+        freqs_de_pico = xf[indexes]
 
-    print("Valores das 5 maiores chaves:", valores_maiores_chaves)
-    print()
+    print("Frequências identificadas nos picos: ", freqs_de_pico)
+
+    # Encontrar a tecla pressionada
+    for tecla, (f1, f2) in dtmf_frequencies.items():
+        if any(np.isclose(freqs_de_pico, f1, atol=5)) and any(np.isclose(freqs_de_pico, f2, atol=5)):
+            print(f"A tecla pressionada foi: {tecla}")
+            break
     plt.show()
+
+if __name__ == "__main__":
+    main()
