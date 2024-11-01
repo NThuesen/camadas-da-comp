@@ -70,9 +70,6 @@ def main():
     # Calcula a Transformada de Fourier do sinal para passar para o domínio da frequência
     xf, yf = signal.calcFFT(dados, sd.default.samplerate)  # Retorna as frequências (xf) e a amplitude (yf)
 
-    # Plot da Transformada de Fourier do sinal
-    plt.figure()
-
     # Definir os limites de frequência desejados
     frequencia_min = 500
     frequencia_max = 2000
