@@ -69,56 +69,74 @@ def main():
 
     # Calcula a Transformada de Fourier do sinal para passar para o domínio da frequência
     xf, yf = signal.calcFFT(dados, sd.default.samplerate)  # Retorna as frequências (xf) e a amplitude (yf)
+
     # Plot da Transformada de Fourier do sinal
-    
     plt.figure()
 
-    dicio = dict(zip(xf, np.abs(yf)))
-    
+    # Definir os limites de frequência desejados
+    frequencia_min = 500
+    frequencia_max = 2000
 
-    # Ordena as frequências de pico pela magnitude em ordem decrescente
-    sorted_peaks = sorted((dicio.values()), reverse=True)
-    # Encontra as chaves correspondentes aos valores em sorted_peaks
-    keys_sorted_peaks = []
-    dico_2 = {}
-    dico_2 = np.where(3000>dicio.values() > 500, np.abs(yf), 0)
-    plt.stem(dico_2.keys(), dico_2.values())
-    plt.title("Transformada de Fourier do Sinal Gravado")
-    plt.xlabel("Frequência [Hz]")
-    plt.ylabel("Magnitude")
-    freqs_de_pico = [freq for freq in keys_sorted_peaks]
-    print(f"Frequências de pico identificadas: {sorted((freqs_de_pico), reverse=True)}")
-    max_picos = freqs_de_pico[:100]  # Obtém as 5 maiores frequências de pico
-    #printe os picos encontrados!
-    list_max_viables = []
-    for valores in max_picos:
-        if 500< valores < 2000:
-            list_max_viables.append(valores)
-            
-    print(f"AAAAAAAAAAAAAAAAA de 5 picos identificados ({len(list_max_viables)} picos), ajustando parâmetros.")
-    
-    
-    for val1, val2 in dtmf_frequencies.values():
-        val1_2mais = val1 + 2
-        val1_2menos = val1 - 2
-        val2_2mais = val2 + 2
-        val2_2menos = val2 - 2
-        for valores in list_max_viables:
-            if val1_2mais > valores > val1_2menos:
-                freqs_de_pico.append(val1)
-            if val2_2mais > valores > val2_2menos:
-                freqs_de_pico.append(val2)
-    
-    freq = (val1, val2) 
-    for key, value in dtmf_frequencies.items():
-    # Ajusta os parâmetros novamente para detectar mais picos, se necessário
-        if freq == value or reversed(freq) == value:
-            print(f"Tecla pressionada: {key}")
-            
+    mascara = (xf >= frequencia_min) & (xf <= frequencia_max)
+
+    # Aplicar a máscara para filtrar xf e yf
+    xf_filtrado = xf[mascara]
+    yf_filtrado = yf[mascara]
+
+    # Plotar o espectro filtrado
+    plt.figure()
+    plt.plot(xf_filtrado, yf_filtrado)
+    plt.title('Espectro de Frequência Filtrado (500 Hz - 2000 Hz)')
+    plt.xlabel('Frequência [Hz]')
+    plt.ylabel('Magnitude')
+    plt.grid(True)
+
+    # Detecção de picos
+    indexes = peakutils.indexes(yf, thres=0.2, min_dist=40)
+    peak_freqs = xf[indexes]
+    peak_magnitudes = yf[indexes]
+
+    print(f'foram detectadas {len(peak_freqs)} frequências de pico')
+    print(f'as frequencias são: {peak_freqs}')
+    # Listas de frequências baixas e altas DTMF
+    low_freqs = [679, 770, 825, 941]
+    high_freqs = [1209, 1336, 1477, 1633]
+
+    # Variáveis para armazenar as frequências baixa e alta detectadas
+    detected_low_freq = None
+    detected_high_freq = None
+
+    # Tolerância para comparação de frequências (em Hz)
+    tolerance = 30
+
+   # Separar as frequências detectadas entre baixa e alta
+    for freq in peak_freqs:
+        # Verifica se a frequência detectada está dentro da faixa de qualquer frequência baixa
+        for low in low_freqs:
+            if low - tolerance <= freq <= low + tolerance:
+                print(f'Frequência baixa detectada: {low} Hz')
+                detected_low_freq = low
+                break
         
-
-
+    # Verifica se a frequência detectada está dentro da faixa de qualquer frequência alta
+    for high in high_freqs:
+        if high - tolerance <= freq <= high + tolerance:
+            print(f'Frequência alta detectada: {high} Hz')
+            detected_high_freq = high
+            break
     
+    # Encontrar a tecla correspondente usando as frequências baixa e alta detectadas
+    detected_key = None
+    if detected_low_freq and detected_high_freq:
+        for key, (f_low, f_high) in dtmf_frequencies.items():
+            if f_low == detected_low_freq and f_high == detected_high_freq:
+                detected_key = key
+                break
+        
+        if detected_key:
+            print(f"A tecla pressionada foi: {detected_key}")
+        else:
+            print("Não foi possível identificar a tecla.")
 
     plt.show()
 
