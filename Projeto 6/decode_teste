@@ -1,15 +1,15 @@
 # Importa todas as bibliotecas necessárias
 from suaBibSignal import *
-import peakutils   # Biblioteca para detectar picos em dados
+import peakutils
 import numpy as np
-import sounddevice as sd  # Biblioteca para capturar e manipular áudio
-import matplotlib.pyplot as plt  # Biblioteca para gráficos
+import sounddevice as sd
+import matplotlib.pyplot as plt
 import time
-from scipy.io.wavfile import write  # Biblioteca para manipular arquivos de áudio .wav
+from scipy.io.wavfile import write
 
 # Função para converter intensidade acústica em dB, caso seja necessário
 def todB(s):
-    sdB = 10 * np.log10(s)  # Calcula o decibel (dB) com base na intensidade acústica do sinal
+    sdB = 10 * np.log10(s)
     return sdB
 
 # Dicionário de frequências DTMF para cada tecla
@@ -34,46 +34,35 @@ dtmf_frequencies = {
 
 def main():
     # Cria um objeto da classe de suporte fornecida
-    signal = signalMeu()  # Esse objeto possui métodos para manipulação de sinais
+    signal = signalMeu()
 
     # Configurações para captura de áudio com sounddevice
-    sd.default.samplerate = 44100  # Taxa de amostragem de 44,1 kHz
-    sd.default.channels = 1  # Número de canais de áudio (1 = mono, 2 = estéreo)
+    sd.default.samplerate = 44100
+    sd.default.channels = 1
     
-    tempo = 4  # Tempo de gravação em segundos
-    duration = tempo  # Duração da gravação (duplicada para clareza do código)
-    numAmostras = tempo * sd.default.samplerate  # Calcula o número de amostras a serem capturadas
+    tempo = 4
+    duration = tempo
+    numAmostras = tempo * sd.default.samplerate
 
-    # Início da gravação
     print("A gravação começará em 3 segundos")
-    time.sleep(3)  # Espera 3 segundos antes de iniciar a gravação
+    time.sleep(3)
     print("Gravação iniciada")
     
     # Captura o áudio
-    audio = sd.rec(int(numAmostras), sd.default.samplerate, channels=1)  # Grava o áudio do microfone
-    sd.wait()  # Aguarda até que a gravação termine
+    audio = sd.rec(int(numAmostras), sd.default.samplerate, channels=1)
+    sd.wait()
     print("Gravacao finalizada")
 
-    # Cria o vetor de tempo para o eixo x do gráfico
-    T = 4  # Duração total em segundos
-    t = np.linspace(0, T, T * sd.default.samplerate)  # Linspace cria pontos espaçados igualmente em um intervalo
+    T = 4
+    t = np.linspace(0, T, T * sd.default.samplerate)
+    dados = audio.flatten()
 
-    # Plot do áudio gravado no domínio do tempo
-    plt.figure()
-    plt.plot(t[:1000], audio[:1000])  # Exibe apenas os primeiros 1000 pontos para clareza
-    plt.title("Áudio capturado - Domínio do Tempo")
-    plt.xlabel("Tempo [s]")
-    plt.ylabel("Amplitude")
-    # Converter o áudio para uma única lista (necessário caso o áudio tenha mais de um canal)
-    dados = audio.flatten()  # 'flatten()' transforma uma matriz multidimensional em um array unidimensional
-
-    # Calcula a Transformada de Fourier do sinal para passar para o domínio da frequência
-    xf, yf = signal.calcFFT(dados, sd.default.samplerate)  # Retorna as frequências (xf) e a amplitude (yf)
+    # Calcula a Transformada de Fourier do sinal
+    xf, yf = signal.calcFFT(dados, sd.default.samplerate)
 
     # Definir os limites de frequência desejados
-    frequencia_min = 500
-    frequencia_max = 2000
-
+    frequencia_min = 600
+    frequencia_max = 1900
     mascara = (xf >= frequencia_min) & (xf <= frequencia_max)
 
     # Aplicar a máscara para filtrar xf e yf
@@ -89,12 +78,13 @@ def main():
     plt.grid(True)
 
     # Detecção de picos
-    indexes = peakutils.indexes(yf, thres=0.2, min_dist=40)
-    peak_freqs = xf[indexes]
-    peak_magnitudes = yf[indexes]
+    indexes = peakutils.indexes(yf_filtrado, thres=0.15, min_dist=50)  # Ajuste do limiar
+    peak_freqs = xf_filtrado[indexes]
+    peak_magnitudes = yf_filtrado[indexes]
 
-    print(f'foram detectadas {len(peak_freqs)} frequências de pico')
-    print(f'as frequencias são: {peak_freqs}')
+    print(f'Foram detectadas {len(peak_freqs)} frequências de pico')
+    print(f'As frequencias são: {peak_freqs}')
+
     # Listas de frequências baixas e altas DTMF
     low_freqs = [679, 770, 825, 941]
     high_freqs = [1209, 1336, 1477, 1633]
@@ -104,24 +94,32 @@ def main():
     detected_high_freq = None
 
     # Tolerância para comparação de frequências (em Hz)
-    tolerance = 30
+    tolerance = 10
+    max_low_magnitude = 0
+    max_high_magnitude = 0
 
-   # Separar as frequências detectadas entre baixa e alta
-    for freq in peak_freqs:
+    # Separar as frequências detectadas entre baixa e alta com base na maior amplitude
+    for i, freq in enumerate(peak_freqs):
         # Verifica se a frequência detectada está dentro da faixa de qualquer frequência baixa
         for low in low_freqs:
             if low - tolerance <= freq <= low + tolerance:
-                print(f'Frequência baixa detectada: {low} Hz')
-                detected_low_freq = low
+                if peak_magnitudes[i] > max_low_magnitude:
+                    detected_low_freq = low
+                    print(f'Frequência baixa detectada: {low} Hz')
+                    max_low_magnitude = peak_magnitudes[i]
+                    print(f'magnitude: {max_low_magnitude}')
+                break
+
+        # Verifica se a frequência detectada está dentro da faixa de qualquer frequência alta
+        for high in high_freqs:
+            if high - tolerance <= freq <= high + tolerance:
+                if peak_magnitudes[i] > max_high_magnitude:
+                    print(f'Frequência alta detectada: {high} Hz')
+                    detected_high_freq = high
+                    max_high_magnitude = peak_magnitudes[i]
+                    print(f'magnitude: {max_high_magnitude}')
                 break
         
-    # Verifica se a frequência detectada está dentro da faixa de qualquer frequência alta
-    for high in high_freqs:
-        if high - tolerance <= freq <= high + tolerance:
-            print(f'Frequência alta detectada: {high} Hz')
-            detected_high_freq = high
-            break
-    
     # Encontrar a tecla correspondente usando as frequências baixa e alta detectadas
     detected_key = None
     if detected_low_freq and detected_high_freq:
@@ -134,6 +132,8 @@ def main():
             print(f"A tecla pressionada foi: {detected_key}")
         else:
             print("Não foi possível identificar a tecla.")
+    else:
+        print("Frequências baixa e/ou alta não detectadas com clareza.")
 
     plt.show()
 

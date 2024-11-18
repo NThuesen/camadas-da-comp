@@ -96,7 +96,7 @@ def main():
     xf , yf = calcFFT(tone,fs)
     print(xf, "X")
     print (yf, "Y")
-    sd.play(tone, fs)
+    sd.play(tone, fs)   
     sd.wait()  # aguarda fim do audio
 
     # plotFFT(self, signal, fs)
