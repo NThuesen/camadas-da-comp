@@ -59,7 +59,7 @@ plt.show()
 
 # Tocar o som filtrado
 
-wavfile.write('audio/audio_diddy_filtrado.wav', samplerate, audio_filtrado.astype(np.int16))
+wavfile.write('teste_filtrado.wav', samplerate, audio_filtrado.astype(np.int16))
 
 # Modulando a funcao
 
@@ -87,8 +87,8 @@ plt.ylabel('Magnitude')
 plt.show()
 
 # Salvando o audio modulado
-wavfile.write('audio/audio_diddy_modulado.wav', samplerate, audio_modulado.astype(np.int16))
+wavfile.write('teste_modulado.wav', samplerate, audio_modulado.astype(np.int16))
 
 # Normalizando o audio modulado
 audio_modulado_normalizado = audio_modulado / max(abs(audio_modulado))
-wavfile.write('audio/audio_diddy_modulado_normalizado.wav', samplerate, audio_modulado_normalizado.astype(np.int16))
+wavfile.write('teste_modulado_normalizado.wav', samplerate, audio_modulado_normalizado.astype(np.int16))

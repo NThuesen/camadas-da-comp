@@ -7,7 +7,7 @@ import sounddevice as sd
 import time
 
 #Pegando o audio modulado
-samplerate, audio_modulado = wavfile.read('audio/audio_diddy_modulado.wav')
+samplerate, audio_modulado = wavfile.read('teste_modulado.wav')
 print("Samplerate: ", samplerate)
 lista_tempo = np.arange(0, len(audio_modulado)/samplerate, 1/samplerate)
 
@@ -50,7 +50,7 @@ plt.show()
 audio_demodulado_filtrado = butter_lowpass_filter(audio_demodulado, 3000, samplerate, 2)
 
 # Salvando o audio demodulado filtrado
-wavfile.write('audio/audio_diddy_demodulado_filtrado.wav', samplerate, audio_demodulado_filtrado.astype(np.int16))
+wavfile.write('teste_demodulado_filtrado.wav', samplerate, audio_demodulado_filtrado.astype(np.int16))
 
 #Grafico de Fourier do audio demodulado filtrado
 
@@ -61,3 +61,4 @@ plt.title('Fourier do Áudio demodulado filtrado')
 plt.xlabel('Frequência (Hz)')
 plt.ylabel('Magnitude')
 plt.show()
+
